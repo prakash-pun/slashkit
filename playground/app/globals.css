@@ -1,6 +1,27 @@
 @import "tailwindcss";
 
 /*
+ * The Slashkit components are gitignored — `scripts/playground-sync.sh` is the
+ * only thing that writes them, so a committed copy could go stale against
+ * `registry/`. Tailwind v4's automatic source detection **skips anything
+ * .gitignore'd**, which means without these two lines it never scans the very
+ * components this page exists to demonstrate: the page renders with its own
+ * chrome styled and every editor, menu and card completely unstyled.
+ *
+ * An explicit `@source` is not subject to the ignore rules, which is exactly
+ * what that escape hatch is for.
+ *
+ * `lib/slashkit` matters as much as `components/slashkit`: `CANVAS_PROSE` and
+ * the renderer's prose strings live there, and they are where most of the class
+ * names in a rendered body come from.
+ *
+ * `scripts/check-playground-css.mjs` fails the build if this ever stops
+ * working — it shipped broken once, silently, because nothing was watching.
+ */
+@source "../components/slashkit";
+@source "../lib/slashkit";
+
+/*
  * The shadcn/ui token layer.
  *
  * Every Slashkit component styles itself from these — `bg-popover`,

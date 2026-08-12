@@ -138,6 +138,11 @@ jobs:
           # loads and then cannot find its own JavaScript.
           NEXT_PUBLIC_BASE_PATH: /slashkit/play
 
+      # A green build that silently drops half the stylesheet is exactly what a
+      # build is supposed to catch — and did not, once.
+      - name: Check Tailwind scanned the Slashkit components
+        run: node scripts/check-playground-css.mjs
+
       - name: Move the playground alongside the registry
         run: |
           mv playground/out public/play
