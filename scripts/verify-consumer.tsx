@@ -252,6 +252,64 @@ check(
 );
 check("excerpt cuts on a word boundary", !/\s\S+…$/.test(excerptFrom("a ".repeat(200), 40)) === false || excerptFrom("word ".repeat(50), 40).endsWith("…"));
 
+// ── The wider vocabulary ────────────────────────────────────────────────────
+console.log("\nvocabulary renders");
+
+const { ContentMarkdownRenderer } = await import(
+  "./components/slashkit/content-markdown-renderer"
+);
+const draw = (body: string) =>
+  renderToStaticMarkup(React.createElement(ContentMarkdownRenderer, { body }));
+
+const vocab = draw(
+  "1. one\n2. two\n\n> quoted\n\n---\n\n`code` and ~~struck~~ and *em*",
+);
+check("ordered list", /<ol/.test(vocab));
+check("blockquote", /<blockquote/.test(vocab));
+check("divider", /<hr/.test(vocab));
+check("inline code", /<code/.test(vocab));
+check("strikethrough — needs GFM, now unconditional", /<del/.test(vocab));
+check("emphasis", /<em/.test(vocab));
+
+const allowed = draw(
+  "<details open>\n<summary>Q</summary>\n\nAn **answer** with <u>underline</u>.\n\n</details>",
+);
+check("collapsible section survives", /<details/.test(allowed));
+check("…keeping its open attribute", /open/.test(allowed));
+check("…and its summary", /<summary/.test(allowed));
+check("underline survives", /<u>/.test(allowed));
+check(
+  "markdown INSIDE a collapsible section still parses",
+  /<strong/.test(allowed),
+  allowed.includes("<strong") ? undefined : "not parsed as markdown",
+);
+
+// ── The sanitizer ───────────────────────────────────────────────────────────
+//
+// `rehype-raw` is what draws `<u>` and `<details>`. Without `rehype-sanitize`
+// behind it every body is a stored-XSS vector, so the allowlist is load
+// bearing — and a claim about it is only worth making if it is tested.
+console.log("\nhostile HTML is filtered");
+
+const script = draw("Hello\n\n<script>alert(1)</script>\n\nWorld");
+check("a <script> tag is dropped entirely", !/<script/i.test(script));
+check(
+  "…and the prose around it is untouched",
+  script.includes("Hello") && script.includes("World"),
+);
+check(
+  "an inline event handler is stripped",
+  !/onerror/i.test(draw('<img src="x" onerror="alert(1)">')),
+);
+check(
+  "a stray <iframe> is dropped",
+  !/<iframe/i.test(draw('<iframe src="https://evil.test"></iframe>')),
+);
+check(
+  "a javascript: href is neutralised",
+  !/javascript:/i.test(draw('<a href="javascript:alert(1)">click</a>')),
+);
+
 console.log("\nblog SEO");
 const jsonLd = buildBlogJsonLd({
   title: "Five ways to budget",

@@ -52,10 +52,14 @@ export interface SlashCommandEditorProps {
    */
   commands: SlashCommandItem[];
   /**
-   * Blockquotes, dividers and checklists. Must match the `richBlocks` you pass
-   * `ContentMarkdownRenderer`, or an author writes blocks that do not render.
+   * Task lists — `- [ ] item`.
+   *
+   * The only part of the vocabulary still opt-in. Everything else (ordered
+   * lists, inline code, quotes, dividers, italic, strike, underline,
+   * collapsible sections) is always on. Pair it with `taskListCommands` so the
+   * menu offers what the schema allows.
    */
-  richBlocks?: boolean;
+  taskLists?: boolean;
   /** Extra Tiptap extensions — a custom node, collaboration, whatever. */
   extraExtensions?: AnyExtension[];
   /** Handed the live editor once it exists, for imperative work. */
@@ -69,7 +73,7 @@ export function SlashCommandEditor({
   body = "",
   onChange,
   commands,
-  richBlocks = false,
+  taskLists = false,
   extraExtensions = [],
   onEditorReady,
   toolbarHint = "Insert a block, or select text to format it",
@@ -80,7 +84,7 @@ export function SlashCommandEditor({
     // framework logs a hydration mismatch for the editor on every load.
     immediatelyRender: false,
     extensions: [
-      ...markdownExtensions(commands, { richBlocks }),
+      ...markdownExtensions(commands, { taskLists }),
       ...extraExtensions,
     ],
     editorProps: {

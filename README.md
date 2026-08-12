@@ -115,7 +115,7 @@ see [Why `tiptap-markdown` needs a shim](#why-tiptap-markdown-needs-a-shim).
 | `video-link-card` | The `[video](url)` card and the rich link preview card, with the whole degradation ladder: thumbnail → title → site → plain link. Plus the link-preview contract and cache. |
 | `youtube-embed` | A facade player. Ships a thumbnail and a play button; the real iframe is only created on click, so scrolling past a video costs nothing. |
 | `content-markdown-renderer` | The one renderer for everything the editor writes. |
-| `slash-command-editor` | The canvas: `/` menu, insert button, selection toolbar, paste-to-embed chooser, and link cards drawn while you type. |
+| `slash-command-editor` | The canvas: `/` menu, insert button, selection toolbar, paste-to-embed chooser, collapsible sections, and link cards drawn while you type. |
 | `highlight-block` | A custom Tiptap node — icon, title, type, rich body — and the public list that renders the same palette. |
 | `device-toggle` | Controlled, router-free segmented control for platform-tagged images. |
 | `editor-sidebar-shell` | The entry list, the two-pane master/detail layout, and the sticky save bar. |
@@ -130,7 +130,7 @@ see [Why `tiptap-markdown` needs a shim](#why-tiptap-markdown-needs-a-shim).
 | --- | --- |
 | `changelog` | A whole release as one document of highlight blocks, structured extraction to a backend-ready array, and a stray-content warning. |
 | `help-articles` | Article editor with per-platform screenshots and a canvas preview filter, plus the public categorized index. |
-| `blog` | Rich-block-enabled post editor, the public post card, and SEO helpers for OG, Twitter Card, JSON-LD and category slugs. |
+| `blog` | Task-list-enabled post editor, the public post card, and SEO helpers for OG, Twitter Card, JSON-LD and category slugs. |
 
 Both tiers are real and both are first-class. A block is a thin composition of
 primitives, not a different kind of thing — `BlogPostEditor` is forty lines over
@@ -232,14 +232,14 @@ export default async function Page({ params }) {
       <script type="application/ld+json"
               dangerouslySetInnerHTML={{ __html: jsonLdScript(buildBlogJsonLd({ ...post, url })) }} />
       <TableOfContents headings={extractHeadings(post.body)} />
-      <ContentMarkdownRenderer body={post.body} richBlocks />
+      <ContentMarkdownRenderer body={post.body} />
     </article>
   );
 }
 ```
 
-`richBlocks` on both, or on neither. See [The `richBlocks`
-pair](#the-richblocks-pair).
+Note the renderer takes no vocabulary flag — see [The
+vocabulary](#the-vocabulary).
 
 ### Help articles
 
@@ -372,24 +372,63 @@ if you upgrade.
 
 ## Things worth knowing
 
-### The `richBlocks` pair
+### The vocabulary
 
-Blockquotes, dividers and checklists are **off by default**, and the editor flag
-and the renderer flag must always match:
+Every editor in the kit can write all of this, on every surface:
+
+| | Markdown |
+| --- | --- |
+| Headings (2–3), paragraphs | `## …` |
+| Bullet and **numbered** lists | `- …` · `1. …` |
+| Bold, *italic*, ~~strike~~ | `**b**` · `*i*` · `~~s~~` |
+| **Inline code** | `` `code` `` |
+| Links, images, `[video](…)` | native |
+| **Blockquotes**, **dividers** | `> …` · `---` |
+| **Underline** | `<u>…</u>` — HTML |
+| **Collapsible sections** | `<details><summary>` — HTML |
+
+Two things stay off deliberately: **fenced code blocks** (a different feature —
+it wants a language picker, highlighting and a copy button) and **tables** (no
+node, no command, and nothing usable for editing one in a canvas this size). The
+renderer will still *draw* a pasted table, which is the safe direction for that
+asymmetry to run.
+
+**Task lists are the one construct still gated**, because `- [ ] item` is a GFM
+extension rather than CommonMark and renders as the literal text `[ ]` anywhere
+without it. The editor flag and the command list switch together:
 
 ```tsx
-<BlogPostEditor            richBlocks />   // can PRODUCE them
-<ContentMarkdownRenderer   richBlocks />   // can DRAW them
+<BlogPostEditor taskLists />   // schema + /checklist command
 ```
 
-Turn one on without the other and an author writes content that renders as
-nothing — a `- [ ] task` that shows up as the literal text `[ ]`.
+`ContentMarkdownRenderer` has no vocabulary flag at all any more — it draws
+everything. A flag there could only ever make the renderer narrower than the
+editor that feeds it, which is the direction that loses content.
 
-The default is off because a body is usually parsed by more than one thing: a
-mobile client, a feed reader, a search indexer. A construct that draws in your
-web renderer and nowhere else is worse than one nobody can write, because nobody
-finds out until it has shipped. `blog` turns it on because a marketing post
-typically has exactly one consumer.
+### Two constructs are HTML, not markdown
+
+Underline and collapsible sections have **no markdown syntax**. Not a niche gap
+— there is simply none, in CommonMark or GFM. So they round trip as `<u>` and
+`<details><summary>`, which is the convention GitHub and most static site
+generators already accept.
+
+Three consequences worth knowing before you ship them:
+
+1. **Bodies are no longer pure markdown.** Anything else that reads them has to
+   tolerate a little HTML.
+2. **The renderer runs `rehype-raw`.** That is what draws those tags — and on
+   its own it would render *any* HTML in a body, including `<script>`. So
+   `rehype-sanitize` sits behind it with an allowlist of exactly `details`,
+   `summary` and `u` on top of a conservative default. A `<script>` in a body is
+   dropped, not escaped. This is covered by tests, not just asserted.
+3. **You can opt out.** Delete `underline-mark.ts` and its bubble-menu entry, or
+   `details-block.ts` and its command. Both are self-contained, and the argument
+   for dropping underline in particular is decent: on the web an underline reads
+   as a link.
+
+If your bodies are ever authored by people you do not trust, widen the schema in
+`content-markdown-renderer.tsx` only alongside an editor change that can
+actually produce the tag.
 
 ### The markdown subset is enforced twice
 
@@ -490,10 +529,12 @@ Current status — all green:
   with the dependency graph resolved
 - 0 TypeScript errors under `strict`, against Tiptap 3.30 / React 19 /
   react-markdown 10
-- 43 runtime assertions pass, covering the highlight round trip (bold, bullets,
+- 59 runtime assertions pass, covering the highlight round trip (bold, bullets,
   the video convention, icon pairing, sort order, stray-block counting), the
-  public render, the platform-alt parser's edge cases, and every
-  `stripMarkdown` leak it was written to prevent
+  public render, the platform-alt parser's edge cases, every `stripMarkdown`
+  leak it was written to prevent, the full vocabulary, and the HTML sanitizer
+  (a `<script>`, an `onerror=`, an `<iframe>` and a `javascript:` href are all
+  dropped while `<details>` and `<u>` survive)
 
 ### The playground is part of the verification
 
@@ -515,6 +556,11 @@ real browser:
 - the platform filter shows one screenshot per platform, with the description —
   not the tag — as its alt text
 - the YouTube facade ships no iframe until it is clicked
+- ordered lists, quotes, dividers, inline code and collapsible sections survive
+  a full markdown round trip — including the blank line after `</summary>`
+  that keeps a section's body parsing as markdown rather than as raw HTML
+- italic, strike and underline apply from the bubble menu and nest correctly
+  (`*~~<u>text</u>~~*`), and toggling underline off removes the tag again
 
 The playground installs through the real `shadcn add`, against the registry
 built from the current commit rather than the published one. So if a demo works,

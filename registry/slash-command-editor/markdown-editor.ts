@@ -5,6 +5,8 @@ import { TaskItem, TaskList } from "@tiptap/extension-list";
 import { Markdown } from "tiptap-markdown";
 
 import { LinkWithPreview } from "@/lib/slashkit/link-with-preview";
+import { UnderlineWithMarkdown } from "@/lib/slashkit/underline-mark";
+import { DetailsBlock } from "@/lib/slashkit/details-block";
 import { PasteLink } from "@/lib/slashkit/paste-link";
 import { SlashCommand } from "@/lib/slashkit/slash-command";
 import type { SlashCommandItem } from "@/lib/slashkit/commands";
@@ -17,63 +19,71 @@ import type { SlashCommandItem } from "@/lib/slashkit/commands";
  * kind of column and are read by the same renderer. Three hand-maintained
  * copies of this list is how one of them quietly acquires a table.
  *
- * ── Why the extension list is SUBTRACTIVE ──────────────────────────────────
- * StarterKit ships blockquote, code, code blocks, horizontal rules, ordered
- * lists, strike, italic and underline. Each carries an INPUT RULE — typing
- * "> ", "1. " or "```" produces the block whether or not a slash command offers
- * it — so restricting the `/` menu is not enough on its own. Turning one back
- * on without a renderer that draws it produces markdown that looks right in the
- * editor and renders as nothing where it ships.
+ * ── The vocabulary, and why it stops where it does ─────────────────────────
+ * Everything below is enabled everywhere:
  *
- * The subset left enabled is: headings (2–3), paragraphs, bullet lists, bold,
- * links, images. That is a deliberate floor, not an accident — it is the set
- * that survives every markdown renderer worth targeting, including the ones
- * that are not this one. Widen it if your only consumer is `richBlocks` above,
- * and widen it in this file so all your canvases move together.
+ *   headings (2–3) · paragraphs · bullet lists · ordered lists · bold · italic
+ *   strike · inline code · links · images · blockquotes · dividers · collapsible
+ *   sections · underline
  *
- * Link stays on and is NOT taken from StarterKit — `LinkWithPreview` takes its
- * place, and two marks named "link" is a schema conflict, not a merge.
+ * Two things stay OFF, and both for a reason rather than by omission:
+ *
+ *   `codeBlock` — a fenced block is a different feature from inline code: it
+ *     wants a language picker, syntax highlighting and a copy button, none of
+ *     which exist here. Leaving it off also keeps `extractHeadings`' line regex
+ *     honest, since a `##` inside a fence would otherwise parse as a heading.
+ *
+ *   tables — no node, no command, and no way to edit one comfortably in a
+ *     canvas this size. The renderer will DRAW a pasted one (remark-gfm is on),
+ *     which is the safe direction for the asymmetry to run.
+ *
+ * ── Why the list is still explicit rather than "StarterKit defaults" ───────
+ * Because the schema is the contract. Every mark and node named here has a
+ * button or a command that can produce it and a renderer that can draw it, and
+ * the only way to keep that true is to write the set down. An extension turned
+ * on by accident is an input rule producing a mark no toolbar can undo.
+ *
+ * ── The two that are HTML, not markdown ────────────────────────────────────
+ * `underline` and `detailsBlock` have no markdown syntax and round trip as
+ * `<u>` and `<details>`. That is why `html: true` below, and why any renderer
+ * showing these bodies has to allow raw HTML. See those two files for the full
+ * argument and for how to drop them if that trade is wrong for you.
  */
 export interface MarkdownExtensionsOptions {
   /**
-   * Blockquotes, dividers and checklists.
+   * Task lists — `- [ ] item`.
    *
-   * Off by default. These sit outside the floor above, and the floor exists
-   * because a body is usually parsed by more than one thing — a mobile client,
-   * a feed, a search indexer. A blockquote in a body that some other renderer
-   * cannot draw is worse than one nobody can write.
+   * The one construct still gated, because it is the one whose rendering
+   * genuinely varies: it needs `remark-gfm` on the renderer and it degrades to
+   * the literal text `[ ]` anywhere that does not have it. Everything else in
+   * the vocabulary above is either CommonMark or explicit HTML, which is far
+   * more portable.
    *
-   * Turn it on for a surface whose bodies only ever reach THIS renderer.
    * Mirrors `ContentMarkdownRenderer`'s flag of the same name: the editor that
-   * can produce these blocks and the renderer that can draw them are switched
-   * on together, or an author writes something that silently disappears.
+   * can PRODUCE these and the renderer that can DRAW them switch on together,
+   * or an author writes something that silently disappears.
    */
-  richBlocks?: boolean;
+  taskLists?: boolean;
 }
 
 export function markdownExtensions(
   commands: SlashCommandItem[],
-  { richBlocks = false }: MarkdownExtensionsOptions = {},
+  { taskLists = false }: MarkdownExtensionsOptions = {},
 ): AnyExtension[] {
   return [
     StarterKit.configure({
       heading: { levels: [2, 3] },
-      blockquote: richBlocks ? undefined : false,
-      horizontalRule: richBlocks ? undefined : false,
-      // Off everywhere, including under `richBlocks`. Code blocks and ordered
-      // lists are excluded for their own reasons, and italic/strike/underline
-      // have no button anywhere in the kit — turning them on would only mean an
-      // input rule producing a mark no toolbar can undo.
-      code: false,
+      // See the note above — a fenced block is its own feature.
       codeBlock: false,
-      orderedList: false,
-      strike: false,
-      italic: false,
-      underline: false,
+      // Replaced below by versions that can round trip through markdown. Two
+      // marks of the same name is a hard schema conflict, not a merge.
       link: false,
+      underline: false,
     }),
-    // Checklists. `TaskItem` must be told it nests inside a `taskList`.
-    ...(richBlocks ? [TaskList, TaskItem.configure({ nested: false })] : []),
+    UnderlineWithMarkdown,
+    DetailsBlock,
+    // Task lists. `TaskItem` must be told it nests inside a `taskList`.
+    ...(taskLists ? [TaskList, TaskItem.configure({ nested: false })] : []),
     LinkWithPreview.configure({
       openOnClick: false, // clicking should put the caret there, not navigate
       autolink: false, // a pasted URL stays text until it's made a link
@@ -91,17 +101,25 @@ export function markdownExtensions(
     // `![a](x)\n\n![b](y)`, stable across any number of edits. A custom node
     // wrapping body content therefore must NOT name `image` in its content
     // expression — an inline node cannot be a direct child of a block-content
-    // node. See `highlight-block-node.ts`.
+    // node. See `highlight-block-node.ts` and `details-block.ts`.
     Image.configure({ inline: true }),
     Markdown.configure({
-      // Raw HTML would pass straight through to wherever these bodies are
-      // rendered, which may well not be able to draw it — and is an injection
-      // surface on any renderer that can.
-      html: false,
+      // ON, and this is a real decision rather than a default.
+      //
+      // `<u>` and `<details>` are the only way to represent underline and a
+      // collapsible section, so the serializer has to be allowed to emit them
+      // and the parser has to be allowed to read them back. The cost is that a
+      // body can now contain arbitrary HTML — which is fine while the only
+      // authors are trusted, and is exactly why `ContentMarkdownRenderer` puts
+      // `rehype-sanitize` in front of `rehype-raw` rather than trusting it.
+      //
+      // Pasting is still guarded separately, below.
+      html: true,
       bulletListMarker: "-",
-      // Pasting markdown-looking text keeps it as TEXT. The paste path skips
-      // the slash menu, so allowing it would be the one route left for a table
-      // or a code fence to get into a body.
+      // Pasting markdown-looking TEXT keeps it as text. The paste path skips
+      // the slash menu, so allowing it would be the one route left for a code
+      // fence to get into a body — and now that `html` is on, for a `<script>`
+      // to be typed in as plain text and become real markup on save.
       transformPastedText: false,
     }),
     SlashCommand.configure({ commands }),
@@ -131,26 +149,32 @@ export function markdownExtensions(
 export const CANVAS_PROSE = [
   "text-[15px] leading-relaxed text-muted-foreground",
   "[&_p]:my-3 [&_strong]:font-semibold [&_strong]:text-foreground",
+  "[&_em]:italic [&_s]:line-through [&_u]:underline [&_u]:underline-offset-2",
   "[&_h2]:mt-6 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-foreground",
   "[&_h3]:mt-5 [&_h3]:mb-2 [&_h3]:text-base [&_h3]:font-medium [&_h3]:text-foreground",
   "[&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_li]:my-1",
+  "[&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5",
+  // Inline code, distinguished by its background rather than a border — a
+  // bordered inline span breaks the line's rhythm at every occurrence.
+  "[&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5",
+  "[&_code]:font-mono [&_code]:text-[13px] [&_code]:text-foreground",
   "[&_a]:font-medium [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2",
   "[&_img:not(.ProseMirror-separator)]:my-3 [&_img:not(.ProseMirror-separator)]:w-full",
   "[&_img:not(.ProseMirror-separator)]:max-w-lg [&_img:not(.ProseMirror-separator)]:rounded-xl",
   "[&_img:not(.ProseMirror-separator)]:border [&_img:not(.ProseMirror-separator)]:border-border/60",
   "[&_.ProseMirror-selectednode]:ring-2 [&_.ProseMirror-selectednode]:ring-ring",
-  // ── `richBlocks` only ─────────────────────────────────────────────────────
-  // Harmless on a canvas that cannot produce these: a selector matching no
-  // element costs nothing, and keeping one prose string means the editor and
-  // the published page cannot drift apart on how a quote looks.
+  // A quote reads as a quote by its rule and its weight, not by italics or
+  // quotation marks — those fight with the bold and links inside it.
   "[&_blockquote]:my-4 [&_blockquote]:border-l-2 [&_blockquote]:border-primary/40",
   "[&_blockquote]:pl-4 [&_blockquote]:text-foreground",
   "[&_hr]:my-8 [&_hr]:border-t [&_hr]:border-border",
   // A selected divider is an atom with no text to highlight, so without this
   // there is no feedback that it is about to be replaced or deleted.
   "[&_hr.ProseMirror-selectednode]:border-ring",
-  // Tiptap marks the list `data-type="taskList"` and each row `data-checked`,
-  // which is what distinguishes these from plain bullets.
+  // ── Task lists (`taskLists` only) ─────────────────────────────────────────
+  // Harmless on a canvas that cannot produce them: a selector matching no
+  // element costs nothing, and keeping one prose string means the editor and
+  // the published page cannot drift apart on how a checklist looks.
   "[&_ul[data-type=taskList]]:my-3 [&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:pl-0",
   "[&_li[data-checked]]:flex [&_li[data-checked]]:items-start [&_li[data-checked]]:gap-2",
   "[&_li[data-checked]>label]:mt-0.5 [&_li[data-checked]>label]:flex [&_li[data-checked]>label]:shrink-0",

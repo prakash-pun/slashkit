@@ -25,6 +25,12 @@ import { DEFAULT_HIGHLIGHT_TYPE } from "@/lib/slashkit/highlight-style";
  * so the SCHEMA enforces the contract rather than relying on the slash menu
  * being the only way content gets in.
  *
+ * KEEP THIS IN STEP WITH `markdownExtensions`. A block the editor can produce
+ * but this expression omits does not error — ProseMirror silently drops it on
+ * insert, so the command appears to do nothing. `detailsBlock` is deliberately
+ * absent: a collapsible section inside a one-line release note is a place to
+ * hide things nobody will read.
+ *
  * `image` is deliberately NOT in that list, and its absence does not mean
  * images are unsupported — `markdownExtensions` registers them as INLINE nodes,
  * so an image lives inside a paragraph and arrives here as one. Naming `image`
@@ -50,7 +56,8 @@ export interface HighlightBlockOptions {
 export const HighlightBlock = Node.create<HighlightBlockOptions>({
   name: "highlightBlock",
   group: "block",
-  content: "(paragraph|heading|bulletList)+",
+  content:
+    "(paragraph|heading|bulletList|orderedList|blockquote|horizontalRule)+",
   isolating: true,
   defining: true,
 

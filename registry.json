@@ -88,6 +88,8 @@
       "description": "The one renderer for everything the editor writes: headings with anchor ids, bullets, bold, links, images, whole-line link cards, inline YouTube, and platform-tagged screenshot filtering.",
       "dependencies": [
         "react-markdown",
+        "rehype-raw",
+        "rehype-sanitize",
         "remark-gfm"
       ],
       "registryDependencies": [
@@ -109,17 +111,18 @@
       "title": "Slash Command Editor",
       "description": "Notion/Linear-style Tiptap canvas with a configurable '/' menu, insert button, selection toolbar, paste-to-embed chooser and link preview cards while typing. Save, load and upload are consumer callbacks.",
       "dependencies": [
+        "@floating-ui/dom",
         "@tiptap/core",
-        "@tiptap/react",
-        "@tiptap/pm",
-        "@tiptap/starter-kit",
         "@tiptap/extension-image",
         "@tiptap/extension-link",
         "@tiptap/extension-list",
+        "@tiptap/extension-underline",
+        "@tiptap/pm",
+        "@tiptap/react",
+        "@tiptap/starter-kit",
         "@tiptap/suggestion",
-        "tiptap-markdown",
-        "@floating-ui/dom",
-        "lucide-react"
+        "lucide-react",
+        "tiptap-markdown"
       ],
       "registryDependencies": [
         "@slashkit/slashkit-lib",
@@ -185,6 +188,21 @@
           "path": "registry/slash-command-editor/tiptap-markdown.d.ts",
           "type": "registry:file",
           "target": "types/tiptap-markdown.d.ts"
+        },
+        {
+          "path": "registry/slash-command-editor/details-block-view.tsx",
+          "type": "registry:component",
+          "target": "components/slashkit/details-block-view.tsx"
+        },
+        {
+          "path": "registry/slash-command-editor/details-block.ts",
+          "type": "registry:lib",
+          "target": "lib/slashkit/details-block.ts"
+        },
+        {
+          "path": "registry/slash-command-editor/underline-mark.ts",
+          "type": "registry:lib",
+          "target": "lib/slashkit/underline-mark.ts"
         }
       ]
     },

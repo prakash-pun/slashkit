@@ -20,9 +20,10 @@ const CATEGORIES = ["Budgeting", "Product Updates", "Personal Finance"];
 /**
  * The blog demo, which is really two demonstrations.
  *
- * The first is `richBlocks`: quotes, dividers and checklists exist here and
- * nowhere else in the kit, and the editor flag and the renderer flag are on
- * together — turn one off and the other silently stops drawing.
+ * The first is `taskLists` — the one construct still gated to this surface,
+ * because `- [ ] item` is GFM rather than CommonMark and renders as literal
+ * "[ ]" anywhere without it. Everything else in the vocabulary is on for all
+ * three demos.
  *
  * The second is the boundary. Title, slug, cover, category and author are all
  * ordinary React state in THIS file. Slashkit owns the body and refuses to own
@@ -51,10 +52,10 @@ export function BlogDemo() {
     <DemoShell
       note={
         <>
-          The blog is the one surface with <Key>/quote</Key>, <Key>/divider</Key>{" "}
-          and <Key>/checklist</Key> — they need <code>richBlocks</code>, which is
-          on in the editor and the renderer together. Everything in the metadata
-          row is this demo&apos;s own state, not Slashkit&apos;s.
+          The blog is the only surface with <Key>/checklist</Key> — task lists
+          are GFM, not CommonMark, so they are gated to a surface with one
+          renderer. Everything in the metadata row above the editor is this
+          demo&apos;s own state, not Slashkit&apos;s.
         </>
       }
       editor={
@@ -99,7 +100,7 @@ export function BlogDemo() {
           <h1 className="mb-4 text-2xl font-semibold tracking-tight text-foreground">
             {title}
           </h1>
-          <ContentMarkdownRenderer body={body} richBlocks />
+          <ContentMarkdownRenderer body={body} />
 
           <div className="mt-8 border-t border-border/60 pt-6">
             <h4 className="mb-3 text-[11px] font-medium tracking-wide text-muted-foreground/70 uppercase">

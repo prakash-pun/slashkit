@@ -1,18 +1,23 @@
 import type { Editor, Range } from "@tiptap/core";
 import {
   Bold,
+  ChevronRight,
+  Code,
   Heading2,
   Heading3,
   Image as ImageIcon,
   Link as LinkIcon,
   List,
   ListChecks,
+  ListOrdered,
   Minus,
   Smartphone,
   TextQuote,
   Video,
   type LucideIcon,
 } from "lucide-react";
+
+import { SUMMARY_INPUT_ATTR } from "@/components/slashkit/details-block-view";
 
 import { safeUrl } from "@/lib/slashkit/link-kind";
 import { buildPlatformAlt } from "@/lib/slashkit/parse-platform-alt";
@@ -154,6 +159,55 @@ export function defaultCommands(
         editor.chain().focus().deleteRange(range).toggleBulletList().run(),
     },
     {
+      title: "Numbered list",
+      icon: ListOrdered,
+      command: ({ editor, range }) =>
+        editor.chain().focus().deleteRange(range).toggleOrderedList().run(),
+    },
+    {
+      title: "Quote",
+      icon: TextQuote,
+      command: ({ editor, range }) =>
+        editor.chain().focus().deleteRange(range).toggleBlockquote().run(),
+    },
+    {
+      title: "Divider",
+      icon: Minus,
+      // `setHorizontalRule` inserts the rule AND a paragraph after it, so the
+      // caret lands on a writable line rather than on the rule itself — which
+      // is an atom, and typing with it selected would replace it.
+      command: ({ editor, range }) =>
+        editor.chain().focus().deleteRange(range).setHorizontalRule().run(),
+    },
+    {
+      title: "Collapsible section",
+      icon: ChevronRight,
+      // Inserted OPEN, with the caret sent to the summary field. A collapsed
+      // empty section is a box with nothing in it and no obvious way in.
+      command: ({ editor, range }) => {
+        editor
+          .chain()
+          .focus()
+          .deleteRange(range)
+          .insertContent({
+            type: "detailsBlock",
+            attrs: { summary: "", open: true },
+            content: [{ type: "paragraph" }],
+          })
+          .run();
+
+        // The summary is a DOM input rather than document content, so the
+        // selection cannot reach it — focus it once the node view has mounted.
+        requestAnimationFrame(() => {
+          editor.view.dom
+            .querySelectorAll<HTMLInputElement>(`input[${SUMMARY_INPUT_ATTR}]`)
+            .forEach((input, _i, all) => {
+              if (input === all[all.length - 1]) input.focus();
+            });
+        });
+      },
+    },
+    {
       title: "Bold text",
       icon: Bold,
       // Nothing is selected at this point, so this sets the STORED mark:
@@ -161,6 +215,14 @@ export function defaultCommands(
       // from a menu you opened on an empty line.
       command: ({ editor, range }) =>
         editor.chain().focus().deleteRange(range).toggleBold().run(),
+    },
+    {
+      title: "Inline code",
+      icon: Code,
+      // Same stored-mark reasoning as Bold above. Inline only — a fenced code
+      // block is a different feature, and `markdownExtensions` says why.
+      command: ({ editor, range }) =>
+        editor.chain().focus().deleteRange(range).toggleCode().run(),
     },
     {
       title: "Image",
@@ -242,29 +304,17 @@ export function defaultCommands(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Blockquote, divider and checklist.
+ * Checklists — the one command still gated.
  *
- * Each depends on an extension `markdownExtensions` only registers under
- * `richBlocks`, so offering them without that flag would put a command in the
- * menu that throws on a node the schema does not have. The two switch on
- * together or not at all.
+ * `toggleTaskList` throws on a schema that has no `taskList` node, so this
+ * belongs only in an editor built with `markdownExtensions(commands, {
+ * taskLists: true })`. The two switch on together or not at all.
+ *
+ * Quote, divider and collapsible section used to live here too. They are in the
+ * shared set now: all three are either CommonMark or explicit HTML, so they
+ * carry no rendering risk that would justify hiding them from a surface.
  */
-export const richBlockCommands: SlashCommandItem[] = [
-  {
-    title: "Quote",
-    icon: TextQuote,
-    command: ({ editor, range }) =>
-      editor.chain().focus().deleteRange(range).toggleBlockquote().run(),
-  },
-  {
-    title: "Divider",
-    icon: Minus,
-    // `setHorizontalRule` inserts the rule AND a paragraph after it, so the
-    // caret lands on a writable line rather than on the rule itself — which is
-    // an atom, and typing with it selected would replace it.
-    command: ({ editor, range }) =>
-      editor.chain().focus().deleteRange(range).setHorizontalRule().run(),
-  },
+export const taskListCommands: SlashCommandItem[] = [
   {
     title: "Checklist",
     icon: ListChecks,
@@ -272,6 +322,14 @@ export const richBlockCommands: SlashCommandItem[] = [
       editor.chain().focus().deleteRange(range).toggleTaskList().run(),
   },
 ];
+
+/**
+ * @deprecated Renamed to `taskListCommands`, and narrowed — quote, divider and
+ * collapsible section moved into `defaultCommands`. Kept so an existing call
+ * site keeps compiling; it no longer adds the three block commands, because
+ * those would then appear twice in the menu.
+ */
+export const richBlockCommands = taskListCommands;
 
 /** What a `/screenshot` dialog hands back. See the `screenshot-dialog` item. */
 export interface PlatformScreenshots {

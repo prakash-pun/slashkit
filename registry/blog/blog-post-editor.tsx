@@ -5,7 +5,7 @@ import type { AnyExtension, Editor } from "@tiptap/core";
 import { SlashCommandEditor } from "@/components/slashkit/slash-command-editor";
 import {
   defaultCommands,
-  richBlockCommands,
+  taskListCommands,
   type DefaultCommandsOptions,
   type SlashCommandItem,
 } from "@/lib/slashkit/commands";
@@ -18,17 +18,18 @@ import {
  * `setContent(markdown)` loads it back — no per-fragment walk like the
  * changelog's highlights, and no platform-image filter like the help articles'.
  *
- * ── Why this one gets `richBlocks` and the others do not ───────────────────
- * Blockquotes, dividers and checklists sit outside the markdown floor
- * `markdownExtensions` defends, and that floor exists because a body is usually
- * parsed by more than one thing — a mobile client, a feed reader, another
- * renderer. A blog post is typically the one surface with a single consumer: a
- * browser and a crawler, both reading THIS renderer. So it is the one that can
- * afford a wider vocabulary.
+ * ── Why this one gets task lists and the others do not ─────────────────────
+ * `- [ ] item` is a GFM extension, not CommonMark: anywhere without GFM it
+ * renders as the literal text "[ ]". A blog post is typically the one surface
+ * with a single consumer — a browser and a crawler, both reading THIS renderer
+ * — so it is the one that can afford a construct with that caveat.
  *
- * If your posts are also parsed elsewhere, pass `richBlocks={false}` and the
- * three extra commands disappear with the three extra node types — they switch
- * together by construction.
+ * If your posts are also parsed elsewhere, pass `taskLists={false}` and the
+ * command disappears with the node type; they switch together by construction.
+ *
+ * Everything else in the vocabulary — ordered lists, inline code, quotes,
+ * dividers, italic, strike, underline, collapsible sections — is on for every
+ * surface, so a post is no longer meaningfully richer than an article.
  *
  * Draft/publish state, author, cover image, category and slug are metadata your
  * app manages around this editor. Slashkit dictates no form for them —
@@ -41,13 +42,8 @@ export interface BlogPostEditorProps {
   onChange: (markdown: string) => void;
   /** The upload and prompt seams. Slashkit never touches a network. */
   commandOptions: DefaultCommandsOptions;
-  /**
-   * Blockquotes, dividers and checklists. On by default here — see above.
-   *
-   * Must match the `richBlocks` you pass `ContentMarkdownRenderer`, or an
-   * author writes blocks that render as nothing.
-   */
-  richBlocks?: boolean;
+  /** Task lists. On by default here — see above. */
+  taskLists?: boolean;
   extraCommands?: SlashCommandItem[];
   extraExtensions?: AnyExtension[];
   onEditorReady?: (editor: Editor) => void;
@@ -58,7 +54,7 @@ export function BlogPostEditor({
   body = "",
   onChange,
   commandOptions,
-  richBlocks = true,
+  taskLists = true,
   extraCommands = [],
   extraExtensions = [],
   onEditorReady,
@@ -66,7 +62,7 @@ export function BlogPostEditor({
 }: BlogPostEditorProps) {
   const commands: SlashCommandItem[] = [
     ...defaultCommands(commandOptions),
-    ...(richBlocks ? richBlockCommands : []),
+    ...(taskLists ? taskListCommands : []),
     ...extraCommands,
   ];
 
@@ -75,7 +71,7 @@ export function BlogPostEditor({
       body={body}
       onChange={onChange}
       commands={commands}
-      richBlocks={richBlocks}
+      taskLists={taskLists}
       extraExtensions={extraExtensions}
       onEditorReady={onEditorReady}
       // Taller than the other two: a post is long-form by nature, and a canvas

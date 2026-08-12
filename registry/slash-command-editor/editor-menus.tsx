@@ -1,16 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/core";
 import { NodeSelection } from "@tiptap/pm/state";
 import { BubbleMenu } from "@tiptap/react/menus";
 import {
   Bold,
+  Code,
   Heading2,
   Heading3,
+  Italic,
   Link as LinkIcon,
   List,
+  ListOrdered,
   Plus,
+  Strikethrough,
+  Underline,
   Unlink,
 } from "lucide-react";
 
@@ -136,15 +141,21 @@ interface BubbleAction {
   /** Whether the mark/node is already applied to the selection. */
   isActive: (editor: Editor) => boolean;
   run: (editor: Editor) => void;
+  /** Starts a new group, drawn with a separator before it. */
+  startsGroup?: boolean;
 }
 
 /**
  * Exactly the formatting the schema actually has, and nothing else.
  *
- * Italic, strike, underline, code and ordered lists are all switched OFF in
- * `markdownExtensions`. A button for any of them would be a no-op that looks
- * like a bug, so this list is deliberately short rather than the usual toolbar
- * of eight. If you widen the schema, widen this — in that order.
+ * Every entry here corresponds to a mark or node `markdownExtensions` enables.
+ * A button for anything else would be a no-op that looks like a bug, so when
+ * you widen the schema, widen this — in that order, never the reverse.
+ *
+ * Grouped: inline marks, then block types. Underline is last of the marks
+ * because it is the one that is HTML rather than markdown — see
+ * `underline-mark.ts` for the trade-off, and delete the entry with the
+ * extension if you would rather not take it.
  */
 const BUBBLE_ACTIONS: BubbleAction[] = [
   {
@@ -154,8 +165,33 @@ const BUBBLE_ACTIONS: BubbleAction[] = [
     run: (editor) => editor.chain().focus().toggleBold().run(),
   },
   {
+    title: "Italic",
+    icon: Italic,
+    isActive: (editor) => editor.isActive("italic"),
+    run: (editor) => editor.chain().focus().toggleItalic().run(),
+  },
+  {
+    title: "Strikethrough",
+    icon: Strikethrough,
+    isActive: (editor) => editor.isActive("strike"),
+    run: (editor) => editor.chain().focus().toggleStrike().run(),
+  },
+  {
+    title: "Underline",
+    icon: Underline,
+    isActive: (editor) => editor.isActive("underline"),
+    run: (editor) => editor.chain().focus().toggleUnderline().run(),
+  },
+  {
+    title: "Inline code",
+    icon: Code,
+    isActive: (editor) => editor.isActive("code"),
+    run: (editor) => editor.chain().focus().toggleCode().run(),
+  },
+  {
     title: "Heading",
     icon: Heading2,
+    startsGroup: true,
     isActive: (editor) => editor.isActive("heading", { level: 2 }),
     // Toggles back to a paragraph when it is already a heading, so the same
     // button undoes itself instead of being a one-way trip.
@@ -172,6 +208,12 @@ const BUBBLE_ACTIONS: BubbleAction[] = [
     icon: List,
     isActive: (editor) => editor.isActive("bulletList"),
     run: (editor) => editor.chain().focus().toggleBulletList().run(),
+  },
+  {
+    title: "Numbered list",
+    icon: ListOrdered,
+    isActive: (editor) => editor.isActive("orderedList"),
+    run: (editor) => editor.chain().focus().toggleOrderedList().run(),
   },
 ];
 
@@ -198,8 +240,11 @@ export function SelectionMenu({ editor }: { editor: Editor | null }) {
       {BUBBLE_ACTIONS.map((action) => {
         const active = action.isActive(editor);
         return (
+          <Fragment key={action.title}>
+            {action.startsGroup && (
+              <span aria-hidden className="mx-0.5 h-5 w-px bg-border/60" />
+            )}
           <button
-            key={action.title}
             type="button"
             // Same reasoning as everywhere else in this file: click blurs the
             // editor and collapses the very selection being formatted.
@@ -220,6 +265,7 @@ export function SelectionMenu({ editor }: { editor: Editor | null }) {
           >
             <action.icon className="size-4" />
           </button>
+          </Fragment>
         );
       })}
 

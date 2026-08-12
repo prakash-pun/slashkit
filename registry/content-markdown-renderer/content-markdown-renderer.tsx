@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 
 import {
   LinkPreviewCard,
@@ -22,6 +24,34 @@ import {
   parsePlatformAlt,
 } from "@/lib/slashkit/parse-platform-alt";
 import { cn } from "@/lib/utils";
+
+/**
+ * What raw HTML is allowed through, and nothing else.
+ *
+ * ── Why sanitizing is not optional ─────────────────────────────────────────
+ * The editor writes two constructs that markdown cannot express — `<u>` for
+ * underline and `<details>` for a collapsible section — so this renderer has to
+ * run `rehype-raw` to draw them. `rehype-raw` on its own renders ANY html in
+ * the body, including `<script>` and `onerror=`, which is a stored-XSS hole the
+ * moment a body comes from anywhere less trusted than your own admin panel.
+ *
+ * So raw HTML is parsed and then filtered against this allowlist. It starts
+ * from `defaultSchema` (a conservative, well-reviewed set) and adds exactly the
+ * three things the editor can produce. Nothing else survives — a `<script>` in
+ * a body is dropped rather than escaped, which is the correct outcome.
+ *
+ * Widen it only alongside an editor change that can actually produce the tag.
+ */
+const HTML_SCHEMA = {
+  ...defaultSchema,
+  tagNames: [...(defaultSchema.tagNames ?? []), "details", "summary", "u"],
+  attributes: {
+    ...defaultSchema.attributes,
+    // `open` is the only attribute worth carrying — it is how an author says a
+    // section should start expanded.
+    details: [...(defaultSchema.attributes?.details ?? []), "open"],
+  },
+};
 
 /**
  * The one renderer for everything the Slashkit editor writes.
@@ -61,22 +91,19 @@ export interface ContentMarkdownRendererProps {
    * lone link as a plain link.
    */
   previews?: PreviewMap;
-  /**
-   * Render checklists, and style blockquotes and dividers.
+  /*
+   * There is deliberately NO vocabulary flag here any more.
    *
-   * Off by default, and that default is the interesting half. Turning it on
-   * loads `remark-gfm`, whose task-list support is the only way `- [ ] item`
-   * becomes a checkbox rather than the literal text "[ ]". Leave it off on any
-   * surface whose bodies are ALSO parsed by something else — a mobile client, a
-   * feed reader, another renderer — because a construct that draws here and not
-   * there is worse than one that draws nowhere: nobody finds out until it has
-   * shipped.
+   * This renderer draws everything the editor can write, plus a little it
+   * cannot (tables, autolinks — GFM comes as one piece). The old `richBlocks`
+   * prop existed to keep the two in step when quotes, dividers and task lists
+   * were gated; now that only the EDITOR gates anything, a flag here would
+   * either do nothing or make the renderer narrower than its author, which is
+   * the direction that loses content.
    *
-   * Mirrors `markdownExtensions`' flag of the same name: the editor that can
-   * PRODUCE these blocks and the renderer that can DRAW them get switched on
-   * together, or an author writes something that silently disappears.
+   * Removed rather than deprecated on purpose: a prop that is quietly ignored
+   * is worse than one that fails to compile and sends you to this comment.
    */
-  richBlocks?: boolean;
   /** Replace the built-in `[video](…)` treatment entirely. */
   renderVideoLink?: (href: string) => ReactNode;
   className?: string;
@@ -87,7 +114,6 @@ export function ContentMarkdownRenderer({
   activePlatform,
   platformTags = DEFAULT_PLATFORM_TAGS,
   previews,
-  richBlocks = false,
   renderVideoLink,
   className,
 }: ContentMarkdownRendererProps) {
@@ -100,10 +126,33 @@ export function ContentMarkdownRenderer({
         "text-[15px] leading-relaxed break-words text-muted-foreground",
         "[&>*]:my-0 [&>*+*]:mt-4",
         "[&_strong]:font-semibold [&_strong]:text-foreground [&_em]:italic",
+        "[&_s]:line-through [&_u]:underline [&_u]:underline-offset-2",
         "[&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-foreground [&_*+h2]:mt-8",
         "[&_h3]:text-base [&_h3]:font-medium [&_h3]:text-foreground [&_*+h3]:mt-6",
         "[&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-1",
-        "[&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[13px]",
+        "[&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5",
+        "[&_code]:font-mono [&_code]:text-[13px] [&_code]:text-foreground",
+        // ── Collapsible sections ───────────────────────────────────────────
+        // A native <details>, so the open/close behaviour is the browser's and
+        // costs no JavaScript — which is what keeps this renderer usable in a
+        // server component.
+        "[&_details]:my-4 [&_details]:overflow-hidden [&_details]:rounded-xl",
+        "[&_details]:border [&_details]:border-border/60",
+        "[&_summary]:cursor-pointer [&_summary]:list-none [&_summary]:bg-muted/40",
+        "[&_summary]:px-3 [&_summary]:py-2 [&_summary]:text-sm [&_summary]:font-medium",
+        "[&_summary]:text-foreground [&_summary]:select-none",
+        "[&_summary]:transition-colors hover:[&_summary]:bg-muted/70",
+        // Safari draws its own triangle through `::-webkit-details-marker` and
+        // ignores `list-style: none`, so it needs removing by name or every
+        // summary shows two disclosure arrows.
+        "[&_summary::-webkit-details-marker]:hidden",
+        // The arrow, drawn on the summary itself and rotated when open.
+        "[&_summary]:before:mr-2 [&_summary]:before:inline-block [&_summary]:before:content-['▸']",
+        "[&_summary]:before:text-muted-foreground [&_summary]:before:transition-transform",
+        "[&_details[open]_summary]:before:rotate-90",
+        "[&_details[open]_summary]:border-b [&_details[open]_summary]:border-border/60",
+        "[&_details>*:not(summary)]:px-3 [&_details>*:not(summary)]:first-of-type:mt-3",
+        "[&_details>*:not(summary)]:last:mb-3",
         // A quote reads as a quote by its rule and its weight, not by italics
         // or quotation marks — those fight with the bold and links inside it.
         "[&_blockquote]:border-l-2 [&_blockquote]:border-primary/40 [&_blockquote]:pl-4",
@@ -133,9 +182,19 @@ export function ContentMarkdownRenderer({
       )}
     >
       <ReactMarkdown
-        // Only when asked for — see the `richBlocks` note above for why this is
-        // not simply always on.
-        remarkPlugins={richBlocks ? [remarkGfm] : []}
+        // GFM is now unconditional: `~~strike~~` is a GFM extension and the
+        // bubble menu can produce it on every surface, so gating it would mean
+        // a button that writes text nothing draws. Its other additions — tables,
+        // autolinks — are things the editor cannot produce but the renderer can
+        // safely show, which is the harmless direction for that asymmetry.
+        //
+        // Task lists are the one part still gated, via `components.input` below.
+        remarkPlugins={[remarkGfm]}
+        // `rehype-raw` is what draws `<u>` and `<details>`; `rehype-sanitize`
+        // is what stops it drawing anything else. ORDER MATTERS — sanitize has
+        // to run after raw, or it filters a tree that has no raw HTML in it yet
+        // and every tag sails through.
+        rehypePlugins={[rehypeRaw, [rehypeSanitize, HTML_SCHEMA]]}
         components={{
           p: ({ node, children }) => {
             // An image tagged for another platform takes its paragraph with it.
