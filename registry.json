@@ -1,7 +1,7 @@
 {
   "$schema": "https://ui.shadcn.com/schema/registry.json",
   "name": "slashkit",
-  "homepage": "https://github.com/your-org/slashkit",
+  "homepage": "https://github.com/prakash-pun/slashkit",
   "items": [
     {
       "name": "slashkit-lib",
