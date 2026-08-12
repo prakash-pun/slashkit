@@ -12,6 +12,10 @@ kind of component you always end up needing to change.
 npx shadcn@latest add @slashkit/blog
 ```
 
+**[Try it →](https://prakash-pun.github.io/slashkit/play/)** — a playground with
+every block running live. Nothing on that page talks to a server, which is the
+whole argument made in one demo.
+
 ---
 
 ## The one rule
@@ -463,6 +467,10 @@ npm run check:no-network   # the one rule, enforced
 npm run typecheck          # the registry sources, against consumer aliases
 npm run registry:build     # writes public/r/*.json
 npm run verify             # the full §8 checklist, end to end
+
+cd playground
+npm run sync               # shadcn add, from the registry you just built
+npm run dev                # run the editors for real
 ```
 
 The first three also run in CI on every push and pull request, and a failure
@@ -486,6 +494,31 @@ Current status — all green:
   the video convention, icon pairing, sort order, stray-block counting), the
   public render, the platform-alt parser's edge cases, and every
   `stripMarkdown` leak it was written to prevent
+
+### The playground is part of the verification
+
+`playground/` is not a marketing page bolted on afterwards — it is where the
+browser-only behaviour gets proven, and CI fails if it does not build. jsdom
+cannot exercise floating-ui positioning (no layout), ProseMirror selection
+through a `mousedown`, `MutationObserver`-driven link cards, `flushSync` during
+node-view mount, or a real paste event. All of those have now been driven in a
+real browser:
+
+- the `/` menu opens, filters as you type, runs on Enter, and deletes its own
+  `/query` text
+- `1/2` does **not** open it — the mid-word guard holds
+- Escape dismisses it and it stays dismissed while the query still matches
+- pasting a URL offers the chooser, and offers Image only for a URL that could
+  plausibly be one
+- highlight node views mount, `/highlight` inserts after the enclosing block
+  rather than nesting, and editing a title updates the public column live
+- the platform filter shows one screenshot per platform, with the description —
+  not the tag — as its alt text
+- the YouTube facade ships no iframe until it is clicked
+
+The playground installs through the real `shadcn add`, against the registry
+built from the current commit rather than the published one. So if a demo works,
+the install path worked.
 
 ---
 

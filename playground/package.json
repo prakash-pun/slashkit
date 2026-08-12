@@ -1,0 +1,42 @@
+{
+  "name": "slashkit-playground",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "sync": "bash ../scripts/playground-sync.sh",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@floating-ui/dom": "^1.8.0",
+    "@tiptap/core": "^3.30.0",
+    "@tiptap/extension-image": "^3.30.0",
+    "@tiptap/extension-link": "^3.30.0",
+    "@tiptap/extension-list": "^3.30.0",
+    "@tiptap/pm": "^3.30.0",
+    "@tiptap/react": "^3.30.0",
+    "@tiptap/starter-kit": "^3.30.0",
+    "@tiptap/suggestion": "^3.30.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.31.0",
+    "next": "^16.3.0",
+    "radix-ui": "^1.6.7",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "tailwind-merge": "^3.6.0",
+    "tiptap-markdown": "^0.9.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "postcss": "^8.5.26",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2"
+  }
+}

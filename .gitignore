@@ -2,7 +2,22 @@ node_modules
 *.tsbuildinfo
 .DS_Store
 
-# Everything under public/ is GENERATED — `registry:build` writes r/*.json and
-# the CI workflow writes index.html. Committing it is how a published registry
-# silently drifts from the sources it claims to be built from.
+# Everything under public/ is GENERATED — `registry:build` writes r/*.json, the
+# CI workflow writes index.html, and the playground export lands in play/.
+# Committing it is how a published registry silently drifts from the sources it
+# claims to be built from.
 public/
+
+# ── Playground ──────────────────────────────────────────────────────────────
+playground/.next
+playground/out
+playground/next-env.d.ts
+
+# Installed by `scripts/playground-sync.sh`, which is the only thing that
+# produces them. Same reasoning as public/: a committed copy is a copy that can
+# go stale against registry/ without anyone noticing.
+playground/components/slashkit/
+playground/components/ui/
+playground/lib/slashkit/
+playground/hooks/
+playground/types/

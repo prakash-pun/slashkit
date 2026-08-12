@@ -98,6 +98,8 @@ jobs:
             }
           </style>
           <h1>${name}</h1>
+          <p><a href="play/"><strong>Open the playground →</strong></a>
+             Try the editor, and see what each block renders.</p>
           <p>A shadcn-style registry. Add it to your <code>components.json</code>:</p>
           <pre>{
             "registries": {
@@ -110,6 +112,39 @@ jobs:
           ${rows}
           </table>`);
           '
+
+      # ── The playground ────────────────────────────────────────────────────
+      #
+      # Installed through the real `shadcn add`, against the registry just built
+      # above rather than the published one — so the demo proves THIS commit
+      # installs, not the last one that deployed. A broken item fails the build
+      # here instead of shipping green.
+      #
+      # Its own npm project, hence the second `npm ci`.
+      - name: Install the playground's dependencies
+        run: npm ci
+        working-directory: playground
+
+      - name: Install the registry into the playground
+        run: npm run sync
+        working-directory: playground
+
+      - name: Build the playground
+        run: npm run build
+        working-directory: playground
+        env:
+          # Pages serves this repo under /slashkit, and the export lands in
+          # public/play — so every asset URL needs both segments or the page
+          # loads and then cannot find its own JavaScript.
+          NEXT_PUBLIC_BASE_PATH: /slashkit/play
+
+      - name: Move the playground alongside the registry
+        run: |
+          mv playground/out public/play
+          test -f public/play/index.html || { echo "::error::playground export is missing"; exit 1; }
+          # The export must not have clobbered the registry it sits beside.
+          test -f public/r/registry.json || { echo "::error::registry was overwritten"; exit 1; }
+          echo "✓ registry at /r, playground at /play"
 
       - uses: actions/configure-pages@v6
         if: github.event_name != 'pull_request'
