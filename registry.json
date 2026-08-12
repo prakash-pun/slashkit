@@ -1,0 +1,434 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "slashkit",
+  "homepage": "https://github.com/your-org/slashkit",
+  "items": [
+    {
+      "name": "slashkit-lib",
+      "type": "registry:lib",
+      "title": "Slashkit Lib",
+      "description": "Pure helpers every Slashkit item builds on: URL classification, markdown AST reading, heading ids, slugs, and the platform-tagged image convention. No React, no network.",
+      "files": [
+        {
+          "path": "registry/slashkit-lib/link-kind.ts",
+          "type": "registry:lib",
+          "target": "lib/slashkit/link-kind.ts"
+        },
+        {
+          "path": "registry/slashkit-lib/markdown-nodes.ts",
+          "type": "registry:lib",
+          "target": "lib/slashkit/markdown-nodes.ts"
+        },
+        {
+          "path": "registry/slashkit-lib/markdown-headings.ts",
+          "type": "registry:lib",
+          "target": "lib/slashkit/markdown-headings.ts"
+        },
+        {
+          "path": "registry/slashkit-lib/slug.ts",
+          "type": "registry:lib",
+          "target": "lib/slashkit/slug.ts"
+        },
+        {
+          "path": "registry/slashkit-lib/parse-platform-alt.ts",
+          "type": "registry:lib",
+          "target": "lib/slashkit/parse-platform-alt.ts"
+        }
+      ]
+    },
+    {
+      "name": "video-link-card",
+      "type": "registry:component",
+      "title": "Video Link Card",
+      "description": "External-link video card and rich link preview card for the [video](url) convention. Never embeds a player, never fetches \u2014 metadata is a prop.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "@slashkit/slashkit-lib"
+      ],
+      "files": [
+        {
+          "path": "registry/video-link-card/video-link-card.tsx",
+          "type": "registry:component",
+          "target": "components/slashkit/video-link-card.tsx"
+        },
+        {
+          "path": "registry/video-link-card/link-preview.ts",
+          "type": "registry:lib",
+          "target": "lib/slashkit/link-preview.ts"
+        },
+        {
+          "path": "registry/video-link-card/use-broken-image.ts",
+          "type": "registry:hook",
+          "target": "hooks/use-broken-image.ts"
+        }
+      ]
+    },
+    {
+      "name": "youtube-embed",
+      "type": "registry:component",
+      "title": "YouTube Embed",
+      "description": "Facade player: ships a thumbnail and a play button, and only creates the real iframe once someone clicks. youtube-nocookie, no third-party cookies until play.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "files": [
+        {
+          "path": "registry/youtube-embed/youtube-embed.tsx",
+          "type": "registry:component",
+          "target": "components/slashkit/youtube-embed.tsx"
+        }
+      ]
+    },
+    {
+      "name": "content-markdown-renderer",
+      "type": "registry:component",
+      "title": "Content Markdown Renderer",
+      "description": "The one renderer for everything the editor writes: headings with anchor ids, bullets, bold, links, images, whole-line link cards, inline YouTube, and platform-tagged screenshot filtering.",
+      "dependencies": [
+        "react-markdown",
+        "remark-gfm"
+      ],
+      "registryDependencies": [
+        "@slashkit/slashkit-lib",
+        "@slashkit/video-link-card",
+        "@slashkit/youtube-embed"
+      ],
+      "files": [
+        {
+          "path": "registry/content-markdown-renderer/content-markdown-renderer.tsx",
+          "type": "registry:component",
+          "target": "components/slashkit/content-markdown-renderer.tsx"
+        }
+      ]
+    },
+    {
+      "name": "slash-command-editor",
+      "type": "registry:block",
+      "title": "Slash Command Editor",
+      "description": "Notion/Linear-style Tiptap canvas with a configurable '/' menu, insert button, selection toolbar, paste-to-embed chooser and link preview cards while typing. Save, load and upload are consumer callbacks.",
+      "dependencies": [
+        "@tiptap/core",
+        "@tiptap/react",
+        "@tiptap/pm",
+        "@tiptap/starter-kit",
+        "@tiptap/extension-image",
+        "@tiptap/extension-link",
+        "@tiptap/extension-list",
+        "@tiptap/suggestion",
+        "tiptap-markdown",
+        "@floating-ui/dom",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "@slashkit/slashkit-lib",
+        "@slashkit/video-link-card"
+      ],
+      "files": [
+        {
+          "path": "registry/slash-command-editor/slash-command-editor.tsx",
+          "type": "registry:component",
+          "target": "components/slashkit/slash-command-editor.tsx"
+        },
+        {
+          "path": "registry/slash-command-editor/slash-command-list.tsx",
+          "type": "registry:component",
+          "target": "components/slashkit/slash-command-list.tsx"
+        },
+        {
+          "path": "registry/slash-command-editor/editor-menus.tsx",
+          "type": "registry:component",
+          "target": "components/slashkit/editor-menus.tsx"
+        },
+        {
+          "path": "registry/slash-command-editor/link-mark-view.tsx",
+          "type": "registry:component",
+          "target": "components/slashkit/link-mark-view.tsx"
+        },
+        {
+          "path": "registry/slash-command-editor/paste-link-chooser.tsx",
+          "type": "registry:component",
+          "target": "components/slashkit/paste-link-chooser.tsx"
+        },
+        {
+          "path": "registry/slash-command-editor/slash-command.ts",
+          "type": "registry:lib",
+          "target": "lib/slashkit/slash-command.ts"
+        },
+        {
+          "path": "registry/slash-command-editor/commands.ts",
+          "type": "registry:lib",
+          "target": "lib/slashkit/commands.ts"
+        },
+        {
+          "path": "registry/slash-command-editor/markdown-editor.ts",
+          "type": "registry:lib",
+          "target": "lib/slashkit/markdown-editor.ts"
+        },
+        {
+          "path": "registry/slash-command-editor/link-with-preview.ts",
+          "type": "registry:lib",
+          "target": "lib/slashkit/link-with-preview.ts"
+        },
+        {
+          "path": "registry/slash-command-editor/paste-link.ts",
+          "type": "registry:lib",
+          "target": "lib/slashkit/paste-link.ts"
+        },
+        {
+          "path": "registry/slash-command-editor/upload.ts",
+          "type": "registry:lib",
+          "target": "lib/slashkit/upload.ts"
+        },
+        {
+          "path": "registry/slash-command-editor/tiptap-markdown.d.ts",
+          "type": "registry:file",
+          "target": "types/tiptap-markdown.d.ts"
+        }
+      ]
+    },
+    {
+      "name": "highlight-block",
+      "type": "registry:component",
+      "title": "Highlight Block",
+      "description": "Custom Tiptap node: icon + title + type + rich content, plus the public What's New renderer that draws the same palette. The building block for changelog-style entries.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "@slashkit/slash-command-editor",
+        "@slashkit/content-markdown-renderer",
+        "popover"
+      ],
+      "files": [
+        {
+          "path": "registry/highlight-block/highlight-block-view.tsx",
+          "type": "registry:component",
+          "target": "components/slashkit/highlight-block-view.tsx"
+        },
+        {
+          "path": "registry/highlight-block/whats-new-list.tsx",
+          "type": "registry:component",
+          "target": "components/slashkit/whats-new-list.tsx"
+        },
+        {
+          "path": "registry/highlight-block/highlight-block-node.ts",
+          "type": "registry:lib",
+          "target": "lib/slashkit/highlight-block-node.ts"
+        },
+        {
+          "path": "registry/highlight-block/highlight-style.ts",
+          "type": "registry:lib",
+          "target": "lib/slashkit/highlight-style.ts"
+        },
+        {
+          "path": "registry/highlight-block/highlight-command.ts",
+          "type": "registry:lib",
+          "target": "lib/slashkit/highlight-command.ts"
+        }
+      ]
+    },
+    {
+      "name": "device-toggle",
+      "type": "registry:component",
+      "title": "Device Toggle",
+      "description": "Fully controlled, router-free segmented control for switching which platform-tagged images are visible. Pairs with content-markdown-renderer's activePlatform.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "files": [
+        {
+          "path": "registry/device-toggle/device-toggle.tsx",
+          "type": "registry:component",
+          "target": "components/slashkit/device-toggle.tsx"
+        }
+      ]
+    },
+    {
+      "name": "editor-sidebar-shell",
+      "type": "registry:component",
+      "title": "Editor Sidebar Shell",
+      "description": "Notion/Linear-style entry list plus the two-pane master/detail layout and sticky save bar around it. Groups, badges, delete controls, and a phone layout that actually works.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "files": [
+        {
+          "path": "registry/editor-sidebar-shell/editor-sidebar-shell.tsx",
+          "type": "registry:component",
+          "target": "components/slashkit/editor-sidebar-shell.tsx"
+        },
+        {
+          "path": "registry/editor-sidebar-shell/editor-shell.tsx",
+          "type": "registry:component",
+          "target": "components/slashkit/editor-shell.tsx"
+        }
+      ]
+    },
+    {
+      "name": "screenshot-dialog",
+      "type": "registry:component",
+      "title": "Screenshot Dialog",
+      "description": "The /screenshot command's dialog: one validated description, N optional uploads, each inserted with the platform tag baked into its alt text.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "@slashkit/slash-command-editor",
+        "button",
+        "dialog",
+        "textarea"
+      ],
+      "files": [
+        {
+          "path": "registry/screenshot-dialog/screenshot-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/slashkit/screenshot-dialog.tsx"
+        },
+        {
+          "path": "registry/screenshot-dialog/screenshot-request.ts",
+          "type": "registry:lib",
+          "target": "lib/slashkit/screenshot-request.ts"
+        }
+      ]
+    },
+    {
+      "name": "cover-image-uploader",
+      "type": "registry:component",
+      "title": "Cover Image Uploader",
+      "description": "A page-level cover image field \u2014 deliberately not a slash command, because a cover is metadata your list, share cards and RSS all read without parsing the body.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "files": [
+        {
+          "path": "registry/cover-image-uploader/cover-image-uploader.tsx",
+          "type": "registry:component",
+          "target": "components/slashkit/cover-image-uploader.tsx"
+        }
+      ]
+    },
+    {
+      "name": "category-combobox",
+      "type": "registry:component",
+      "title": "Category Combobox",
+      "description": "Type anything, or pick one already in use. Keeps a free-string category column free \u2014 a select would undo that decision in the UI.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "files": [
+        {
+          "path": "registry/category-combobox/category-combobox.tsx",
+          "type": "registry:component",
+          "target": "components/slashkit/category-combobox.tsx"
+        }
+      ]
+    },
+    {
+      "name": "table-of-contents",
+      "type": "registry:component",
+      "title": "Table of Contents",
+      "description": "A document's contents derived from its own headings at render time, sharing one heading-id rule with the renderer so the links cannot go nowhere.",
+      "registryDependencies": [
+        "@slashkit/slashkit-lib"
+      ],
+      "files": [
+        {
+          "path": "registry/table-of-contents/table-of-contents.tsx",
+          "type": "registry:component",
+          "target": "components/slashkit/table-of-contents.tsx"
+        }
+      ]
+    },
+    {
+      "name": "changelog",
+      "type": "registry:block",
+      "title": "Changelog",
+      "description": "Full changelog feature: a whole release as one document of highlight blocks, structured extraction to a backend-ready array, stray-content warning, and the public What's New display.",
+      "registryDependencies": [
+        "@slashkit/slash-command-editor",
+        "@slashkit/highlight-block",
+        "@slashkit/editor-sidebar-shell"
+      ],
+      "files": [
+        {
+          "path": "registry/changelog/changelog-editor.tsx",
+          "type": "registry:component",
+          "target": "components/slashkit/changelog-editor.tsx"
+        },
+        {
+          "path": "registry/changelog/extract-highlights.ts",
+          "type": "registry:lib",
+          "target": "lib/slashkit/extract-highlights.ts"
+        },
+        {
+          "path": "registry/changelog/collect-links.ts",
+          "type": "registry:lib",
+          "target": "lib/slashkit/collect-links.ts"
+        }
+      ]
+    },
+    {
+      "name": "help-articles",
+      "type": "registry:block",
+      "title": "Help Articles",
+      "description": "Full help-center feature: flat categorized article editor with per-platform screenshots and a canvas preview filter, plus the public categorized index.",
+      "registryDependencies": [
+        "@slashkit/slash-command-editor",
+        "@slashkit/content-markdown-renderer",
+        "@slashkit/device-toggle",
+        "@slashkit/editor-sidebar-shell",
+        "@slashkit/screenshot-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/help-articles/help-article-editor.tsx",
+          "type": "registry:component",
+          "target": "components/slashkit/help-article-editor.tsx"
+        },
+        {
+          "path": "registry/help-articles/help-article-list.tsx",
+          "type": "registry:component",
+          "target": "components/slashkit/help-article-list.tsx"
+        }
+      ]
+    },
+    {
+      "name": "blog",
+      "type": "registry:block",
+      "title": "Blog",
+      "description": "Full blog feature: rich-block-enabled post editor, public post card with the anchor-nesting problem solved, and SEO helpers for OG, Twitter Card, JSON-LD and category slugs.",
+      "registryDependencies": [
+        "@slashkit/slash-command-editor",
+        "@slashkit/content-markdown-renderer",
+        "@slashkit/editor-sidebar-shell",
+        "@slashkit/table-of-contents",
+        "@slashkit/cover-image-uploader",
+        "@slashkit/category-combobox"
+      ],
+      "files": [
+        {
+          "path": "registry/blog/blog-post-editor.tsx",
+          "type": "registry:component",
+          "target": "components/slashkit/blog-post-editor.tsx"
+        },
+        {
+          "path": "registry/blog/blog-post-card.tsx",
+          "type": "registry:component",
+          "target": "components/slashkit/blog-post-card.tsx"
+        },
+        {
+          "path": "registry/blog/seo-helpers.ts",
+          "type": "registry:lib",
+          "target": "lib/slashkit/seo-helpers.ts"
+        },
+        {
+          "path": "registry/blog/strip-markdown.ts",
+          "type": "registry:lib",
+          "target": "lib/slashkit/strip-markdown.ts"
+        }
+      ]
+    }
+  ]
+}
