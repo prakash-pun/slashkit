@@ -1,4 +1,8 @@
 node_modules
-public/r
 *.tsbuildinfo
 .DS_Store
+
+# Everything under public/ is GENERATED — `registry:build` writes r/*.json and
+# the CI workflow writes index.html. Committing it is how a published registry
+# silently drifts from the sources it claims to be built from.
+public/

@@ -13,10 +13,51 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "baseUrl": ".",
+
+    // ── Resolving a consumer's aliases against this repo's layout ───────────
+    //
+    // Registry files import the way a CONSUMER will — `@/lib/slashkit/commands`
+    // — because that is what shadcn copies into their project. Here the sources
+    // still live under `registry/<item>/`, so each alias lists every item
+    // directory as a candidate and TypeScript takes the first that resolves.
+    //
+    // Filenames are unique across items (that is also what makes the flat
+    // `lib/slashkit/` target layout work in a consumer), so the ordering below
+    // never has to disambiguate anything.
+    //
+    // Adding an item? Add its directory to both lists.
     "paths": {
-      "@/*": ["./*"]
+      "@/lib/utils": ["typecheck/lib/utils.ts"],
+      "@/components/ui/*": ["typecheck/components/ui/*"],
+
+      "@/lib/slashkit/*": [
+        "registry/slashkit-lib/*",
+        "registry/slash-command-editor/*",
+        "registry/highlight-block/*",
+        "registry/video-link-card/*",
+        "registry/screenshot-dialog/*",
+        "registry/changelog/*",
+        "registry/blog/*"
+      ],
+      "@/components/slashkit/*": [
+        "registry/slash-command-editor/*",
+        "registry/content-markdown-renderer/*",
+        "registry/video-link-card/*",
+        "registry/youtube-embed/*",
+        "registry/highlight-block/*",
+        "registry/device-toggle/*",
+        "registry/editor-sidebar-shell/*",
+        "registry/screenshot-dialog/*",
+        "registry/cover-image-uploader/*",
+        "registry/category-combobox/*",
+        "registry/table-of-contents/*",
+        "registry/changelog/*",
+        "registry/help-articles/*",
+        "registry/blog/*"
+      ],
+      "@/hooks/*": ["registry/video-link-card/*"]
     }
   },
-  "include": ["registry/**/*.ts", "registry/**/*.tsx", "types/**/*.d.ts"],
+  "include": ["registry/**/*.ts", "registry/**/*.tsx", "typecheck/**/*.ts", "typecheck/**/*.tsx"],
   "exclude": ["node_modules", "public"]
 }

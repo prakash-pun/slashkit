@@ -62,13 +62,20 @@ namespace, so this step is what makes `@slashkit/changelog` able to pull in
 ```json
 {
   "registries": {
-    "@slashkit": "https://your-host/r/{name}.json"
+    "@slashkit": "https://prakash-pun.github.io/slashkit/r/{name}.json"
   }
 }
 ```
 
-Serving it yourself is a static file host away — `npm run registry:build`
-writes `public/r/*.json` and that directory is the whole registry.
+That URL is published by
+[the registry workflow](.github/workflows/registry.yml): every push to `main`
+re-runs the no-network check, typechecks the sources, rebuilds `public/r/` and
+deploys it to GitHub Pages. The built JSON is **never committed** — it exists
+only as a build artefact, which is what makes it impossible for the published
+registry to drift from the files in this repo.
+
+To host your own fork instead, point any static file host at `public/r/` after
+`npm run registry:build`. That directory is the entire registry.
 
 ### 2. Add what you want
 
@@ -453,9 +460,16 @@ both by construction rather than by remembering to.
 
 ```bash
 npm run check:no-network   # the one rule, enforced
+npm run typecheck          # the registry sources, against consumer aliases
 npm run registry:build     # writes public/r/*.json
 npm run verify             # the full §8 checklist, end to end
 ```
+
+The first three also run in CI on every push and pull request, and a failure
+blocks the publish. `typecheck` resolves the `@/` aliases against this repo's
+layout using `tsconfig.json` paths plus the stubs in
+[`typecheck/`](typecheck/README.md) — fast feedback without a full install.
+`verify` is the one that checks against the *real* shadcn/ui components.
 
 `npm run verify` scaffolds a throwaway app, serves the built registry over HTTP,
 installs all three blocks through the real `shadcn add`, typechecks every
@@ -501,3 +515,9 @@ Worth stating plainly, because each was a decision rather than an oversight:
 - A data-fetching layer. `getPost`, `getArticles` and friends in the examples
   are yours.
 - Anything non-web.
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE). Copy the files, change them, ship them.

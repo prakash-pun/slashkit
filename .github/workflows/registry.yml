@@ -1,0 +1,130 @@
+name: Build and publish registry
+
+# The built JSON is deliberately NOT committed — `public/r` stays gitignored.
+# This workflow is the only thing that produces it, which is what makes it
+# impossible for the published registry to drift from the source files.
+on:
+  push:
+    branches: [main]
+  # So a broken registry is caught on the PR rather than after it lands. Pull
+  # requests build but never deploy — see the `if` on the deploy job.
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# A queued run supersedes an older one, but an in-progress DEPLOY is left to
+# finish — cancelling mid-deploy can leave Pages serving a half-published site.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The one rule this project has. Failing here fails the publish, which is
+      # the point: a registry item that reaches for the network must never ship.
+      - name: Check the no-network rule
+        run: npm run check:no-network
+
+      - name: Typecheck the registry sources
+        run: npm run typecheck
+
+      - name: Build the registry
+        run: npm run registry:build
+
+      # `shadcn build` exits 0 on an empty run, so prove the artefacts exist
+      # and parse before publishing them as a registry anyone can install from.
+      - name: Verify the built output
+        run: |
+          test -f public/r/registry.json || { echo "::error::no public/r/registry.json"; exit 1; }
+          count=$(ls public/r/*.json | wc -l | tr -d ' ')
+          expected=$(node -p "require('./registry.json').items.length + 1")
+          if [ "$count" != "$expected" ]; then
+            echo "::error::built $count files, expected $expected (items + registry.json)"
+            exit 1
+          fi
+          for f in public/r/*.json; do
+            node -e "JSON.parse(require('fs').readFileSync('$f','utf8'))" \
+              || { echo "::error::$f is not valid JSON"; exit 1; }
+          done
+          echo "✓ $count valid registry files"
+
+      # A bare index, so the Pages root is not a 404. Written here rather than
+      # committed for the same reason as the JSON: it lists what was built.
+      - name: Write an index page
+        run: |
+          node -e '
+            const fs = require("fs");
+            const { items, name, homepage } = require("./registry.json");
+            // A plain string, NOT `new URL(...)` — that percent-encodes the
+            // `{name}` placeholder into `%7Bname%7D`, and the snippet below is
+            // meant to be copied straight into a components.json.
+            const base = "https://prakash-pun.github.io/slashkit/";
+            const rows = items.map((i) =>
+              `<tr><td><code>@slashkit/${i.name}</code></td><td>${i.title}</td>` +
+              `<td><a href="r/${i.name}.json">json</a></td></tr>`).join("\n");
+            fs.writeFileSync("public/index.html", `<!doctype html>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <title>${name} registry</title>
+          <style>
+            body{font:16px/1.6 ui-sans-serif,system-ui,sans-serif;max-width:52rem;margin:3rem auto;padding:0 1.5rem}
+            table{border-collapse:collapse;width:100%;margin-top:1.5rem}
+            td,th{text-align:left;padding:.4rem .75rem;border-bottom:1px solid #e5e5e5}
+            code{background:#f4f4f5;padding:.1rem .35rem;border-radius:.25rem;font-size:.9em}
+            pre{background:#f4f4f5;padding:1rem;border-radius:.5rem;overflow-x:auto}
+            @media (prefers-color-scheme:dark){
+              body{background:#0a0a0a;color:#e5e5e5}
+              td,th{border-color:#262626}code,pre{background:#171717}
+              a{color:#93c5fd}
+            }
+          </style>
+          <h1>${name}</h1>
+          <p>A shadcn-style registry. Add it to your <code>components.json</code>:</p>
+          <pre>{
+            "registries": {
+              "@slashkit": "${base}r/{name}.json"
+            }
+          }</pre>
+          <p>Then <code>npx shadcn@latest add @slashkit/&lt;item&gt;</code>.
+             Source: <a href="${homepage}">${homepage}</a></p>
+          <table><tr><th>Item</th><th></th><th></th></tr>
+          ${rows}
+          </table>`);
+          '
+
+      - uses: actions/configure-pages@v5
+        if: github.event_name != 'pull_request'
+
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
+        with:
+          path: public
+
+  deploy:
+    # Never from a pull request: a fork's PR must not be able to publish to the
+    # registry URL people install from.
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
